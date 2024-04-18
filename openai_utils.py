@@ -6,7 +6,7 @@ def call_openai_for_sva(json_spec):
     Converts JSON specification to a structured prompt for better understanding by the model.
     Uses the chat model API endpoint.
     """
-    # Construct a detailed prompt to better guide the AI in generating useful and accurate SVAs.
+    
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": f"Generate SystemVerilog Assertions based on the following JSON-like hardware specifications:\n{json_spec}"}
@@ -15,7 +15,7 @@ def call_openai_for_sva(json_spec):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=messages,
-        max_tokens=200  # Adjusted for potentially complex SVA generation
+        max_tokens=200 
     )
     return response['choices'][0]['message']['content'].strip()
 
