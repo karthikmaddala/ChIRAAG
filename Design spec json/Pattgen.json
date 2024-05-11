@@ -1,0 +1,66 @@
+{
+  "name": "Pattern Generator HWIP",
+  "description": "This module specifies the functionality of the pattern generator hardware IP. It conforms to the Comportable guideline for peripheral functionality.",
+  "operation": {
+    "start_stop": "The pattern can be started or halted on either channel by setting the corresponding CTRL_ENABLE bit to 1 (on) or 0 (off).",
+    "config_while_disabled": "Channel parameters can be configured independently while disabled, including clock divider ratio, clock polarity, pattern length, pattern data, and repetition count. Configuration takes effect upon re-enabling.",
+    "note": "Writes to a channel's configuration registers have no effect while the channel is disabled. Configuration is transferred into the internal finite state machines only when a channel is disabled and then re-enabled."
+  },
+  "design_details": {
+    "components": [
+      {
+        "name": "Finite State Machines (FSMs)",
+        "quantity": 2,
+        "description": "Each FSM controls a pattern generation channel, consisting of nested counters for clock division, sequence output, and repetition tracking.",
+        "states": ["IDLE", "ACTIVE", "END"]
+      }
+    ],
+    "inputs": [
+      "clk_io", "reset", "enable", "clk_pre_divide", "pattern", "pattern_size", "polarity", "n_repeats"
+    ],
+    "outputs": [
+      "pda", "pcl"
+    ],
+    "clocking": {
+      "description": "The FSM clock output, pcl, is driven by clk_int unless polarity is high, in which case pcl is inverted from clk_int."
+    }
+  },
+  "interrupts": {
+    "description": "Provides two interrupt pins, done_ch0 and done_ch1, indicating the completion of pattern generation on the output channels.",
+    "enable_disable": "Interrupts can be enabled/disabled via the INTR_ENABLE register and cleared by writing to the INTR_STATE register."
+  },
+  "features": [
+    {
+      "name": "Channels",
+      "description": "Generates time-dependent patterns on two channels, each with its own clock.",
+      "details": [
+        "In each channel, data is transmitted serially on a one-bit data (pda) output, synchronous to a corresponding parallel clock signal (pcl).",
+        "The channels can operate independently or synchronously with each other."
+      ]
+    },
+    {
+      "name": "Output Channel Configuration",
+      "description": "Each output channel supports multiple configuration settings.",
+      "settings": [
+        {
+          "pattern_data_per_output": "Up to 64 bits of data."
+        },
+        {
+          "pre-divider": "32-bit pre-divider to derive pattern clock from I/O clock (minimum ratio: 2)."
+        },
+        {
+          "pattern_repetition": "Each pattern can be repeated up to 1024 times."
+        },
+        {
+          "clock_polarity": "The polarity of the clock signal is programmable."
+        }
+      ]
+    },
+    {
+      "name": "Interrupts",
+      "description": "The block sends an interrupt on pattern completion."
+    }
+  ],
+  "compatibility": "This IP block does not have any direct hardware compatibility requirements."
+}
+
