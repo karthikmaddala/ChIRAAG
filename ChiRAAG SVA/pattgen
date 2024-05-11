@@ -48,3 +48,28 @@ endproperty;
 // Assert the property
 assert property (check_intr_done_ch0_completion)
     else $error("Interrupt signal intr_done_ch0_o did not behave as expected after pattern completion.");
+
+
+//Assertion 5: Assert that the data output signals pda0_tx_o and pda1_tx_o for both channels are stable during the parallel clock output pcl0_tx_o and pcl1_tx_o:
+
+
+// Define the property to check if pda0_tx_o is stable at the posedge of pcl0_tx_o
+property check_pda0_stability_on_pcl0;
+    @(posedge pcl0_tx_o) disable iff (!rst_ni)
+    (pda0_tx_o == $past(pda0_tx_o));
+endproperty;
+
+// Assert the property
+assert property (check_pda0_stability_on_pcl0)
+    else $error("Data output pda0_tx_o is not stable during the parallel clock output pcl0_tx_o.");
+
+  // Define the property to check if pda1_tx_o is stable at the posedge of pcl1_tx_o
+property check_pda1_stability_on_pcl1;
+    @(posedge pcl1_tx_o) disable iff (!rst_ni)
+    (pda1_tx_o == $past(pda1_tx_o));
+endproperty;
+
+// Assert the property
+assert property (check_pda1_stability_on_pcl1)
+    else $error("Data output pda1_tx_o is not stable during the parallel clock output pcl1_tx_o.");
+
