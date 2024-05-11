@@ -1,69 +1,53 @@
 {
   "GPIOModule": {
-    "Description": "Standalone General Purpose Input/Output module for simple digital IO operations, designed for educational and verification purposes without external dependencies.",
+    "Description": "Comprehensive GPIO module with input filtering, output control, interrupts, and alerting mechanism, designed to provide a robust interface for digital I/O operations.",
     "Features": {
-      "GPIOCount": 32,
-      "IndependentInputFiltering": "Each input can be individually filtered to stabilize noisy signals before being read internally.",
-      "FlexibleOutputControl": "Direct control over each GPIO pin's output state and output enable state via internal registers."
+      "GPIOCount": "32, supporting individual signal control for a wide range of applications.",
+      "InputFiltering": "Debouncing or stabilizing inputs to mitigate the effects of noisy signals, enhancing reliability in signal processing.",
+      "OutputControl": "Direct control of GPIO pin outputs via registers, facilitating precise management of pin states.",
+      "InterruptGeneration": "Capability to generate interrupts based on dynamic changes in input states, allowing for responsive system behaviors.",
+      "AlertingMechanism": "Monitors output conditions to trigger alerts on operational anomalies, crucial for error handling and system safety."
     },
-    "Operation": {
+    "Interface": {
       "Inputs": {
-        "gpio_input": {
-          "Description": "32-bit input reflecting external signals or pin states, potentially noisy and requiring stabilization.",
-          "Effects": {
-            "Filtered": "Each bit is filtered through a simple debounce logic before being used internally.",
-            "UsedForInterrupts": "Filtered inputs are monitored for edge detections to generate interrupts."
-          }
-        }
+        "clk_i": "Clock input driving the module's operations.",
+        "rst_ni": "Active-low reset input that initializes all module states.",
+        "gpio_input": "32-bit wide input reflecting the current state of external GPIO signals."
       },
       "Outputs": {
-        "gpio_output": {
-          "Description": "32-bit output directly controlled by internal register 'direct_out'.",
-          "ControlledBy": "direct_out register determines the level of each GPIO output pin."
-        },
-        "gpio_output_enable": {
-          "Description": "32-bit output enable signal controlled by internal register 'direct_oe'.",
-          "ControlledBy": "direct_oe register enables output functionality of GPIO pins, allowing outputs to drive external circuits."
-        }
-      },
-      "Registers": {
-        "direct_out": {
-          "Description": "Register controlling the output levels of GPIO pins.",
-          "Interaction": {
-            "DirectMapping": "Each bit of this register directly sets the corresponding GPIO output."
-          }
-        },
-        "direct_oe": {
-          "Description": "Register controlling the output enable state of GPIO pins.",
-          "Interaction": {
-            "DirectMapping": "Each bit of this register directly enables or disables the output driver for the corresponding GPIO pin."
-          }
-        }
-      },
-      "Interrupts": {
-        "Description": "Generates interrupts based on edge detection on GPIO inputs.",
-        "Logic": {
-          "RisingEdge": "Interrupt is generated when a rising edge is detected on any GPIO input configured for it.",
-          "FallingEdge": "Interrupt is generated when a falling edge is detected on any GPIO input configured for it."
-        }
-      },
-      "InputOutputMapping": {
-        "Description": "Explains how inputs are mapped to outputs based on internal logic and settings.",
-        "Details": [
-          {
-            "Input": "gpio_input",
-            "Output": "gpio_output",
-            "Condition": "Output follows input when corresponding output enable bit is set."
-          }
-        ]
+        "gpio_output": "32-bit wide output delivering the module's current output state to external pins.",
+        "gpio_output_enable": "32-bit wide output enable signals that control the direction (input/output) of GPIO pins.",
+        "alert_signal": "Single-bit output that indicates an operational anomaly, such as a mismatch between output levels and their enables."
       }
     },
-    "DesignImplementation": {
-      "SimplifiedModel": "Focuses on essential GPIO functionalities with mocked internal behaviors for easy testing and integration",
-      "KeyLogicImplementations": {
-        "Filtering": "Debounces inputs to stabilize them before processing.",
-        "OutputControl": "Uses simple bitwise logic to control outputs based on internal register values."
+    "Registers": {
+      "direct_out": "32-bit register that holds the values to be output on GPIO pins when their corresponding output enables are active.",
+      "direct_oe": "32-bit register that controls whether each GPIO pin is configured as an output.",
+      "intr_enable": "32-bit register that enables interrupts on a per-pin basis.",
+      "intr_state": "32-bit register that reflects the current interrupt status for each pin."
+    },
+    "LogicDetails": {
+      "Filtering": {
+        "Description": "Each input pin is connected through a basic filtering mechanism which stabilizes the input before it affects the module's output or interrupt behavior.",
+        "Implementation": "Simple latch that updates based on a stability condition governed by the module's clock."
+      },
+      "InterruptHandling": {
+        "Description": "Interrupts are generated based on configurable edge detection logic applied to the filtered inputs.",
+        "Edges": {
+          "Rising": "Interrupt on a low-to-high transition.",
+          "Falling": "Interrupt on a high-to-low transition."
+        }
+      },
+      "AlertMechanism": {
+        "Description": "Alerts are generated if any GPIO pin is driven (output high) while its output enable is deactivated (low), indicating a potential misconfiguration or fault condition.",
+        "TriggerCondition": "Output high AND Output Enable low"
       }
+    },
+    "SimulationModel": {
+      "Variables": {
+        "filter_reg": "Intermediate register that holds the debounced or filtered state of inputs.",
+        "previous_input": "Register that holds the previous state of filtered inputs for edge detection purposes."
+      },
     }
   }
 }
