@@ -73,3 +73,16 @@ endproperty;
 assert property (check_pda1_stability_on_pcl1)
     else $error("Data output pda1_tx_o is not stable during the parallel clock output pcl1_tx_o.");
 
+//Assertion 6: Assert that the interrupt signal intr_done_ch1_o for channel 1 is activated only after channel 0 completes its pattern without any reset assertion(0 iterations):
+  // Define the property to check intr_done_ch1_o activation follows intr_done_ch0_o completion without a reset
+property check_intr_done_ch1_activation;
+    @(posedge intr_done_ch0_o) disable iff (!rst_ni)
+    !rst_ni |-> ##1 (intr_done_ch1_o == 1'b1);
+endproperty;
+
+// Assert the property
+assert property (check_intr_done_ch1_activation)
+    else $error("Interrupt signal intr_done_ch1_o was not activated correctly after intr_done_ch0_o without reset.");
+
+
+
