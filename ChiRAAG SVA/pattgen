@@ -38,3 +38,13 @@ endproperty;
 
 assert property (check_parallel_clock_output_ch1)
     else $error("Parallel clock output for channel 1 not generated correctly when serial data output is valid");
+
+//Assertion 4: Assert that the interrupt signal intr_done_ch0_o for channel 0 is activated only when the pattern for channel 0 completes(0 iterations)
+property check_intr_done_ch0_completion;
+    @(posedge clk_i) disable iff (rst_ni)
+    (intr_done_ch0_o == 1'b1) |-> ##[1:$] (intr_done_ch0_o == 1'b0);
+endproperty;
+
+// Assert the property
+assert property (check_intr_done_ch0_completion)
+    else $error("Interrupt signal intr_done_ch0_o did not behave as expected after pattern completion.");
