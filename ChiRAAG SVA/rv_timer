@@ -1,0 +1,100 @@
+ //1.check for correct initialization(1 iteration)
+property initialization;
+  @(posedge clk_i) disable iff (!rst_ni) 
+    ($rose(clk_i) && !rst_ni) |-> (!active);
+endproperty
+
+  
+  //2.Assertion for tick generation based on prescaler ans step value(3 iterations)
+property prescaler_step_check;
+  @(posedge clk_i) disable iff (!rst_ni)
+  (active && (prescaler == 0 || step == 0));
+endproperty
+
+
+  //3.Assertion for correct tick generation using prescaler(0 iterations)
+property prescaler_check;
+  @(posedge clk_i) disable iff (!rst_ni)
+  (active && (prescaler == 0));
+endproperty
+
+assert property (prescaler_check) else begin
+  $display("Error: Prescaler should be non-zero when module is active");
+end
+
+  //4.Assertion to Verify that the tick signal is raised when mtime is incremented by the step value(4 iterations)
+property assertion_tick_raise;
+  @(posedge clk_i) disable iff (!active || rst_ni)
+  (tick === 1'b1);
+endproperty
+//5.Assertion for mtime_increment
+property assertion_mtime_increment;
+  @(posedge clk_i) disable iff (!active || rst_ni)
+  (mtime_d == mtime + step);
+endproperty
+
+assert property (assertion_tick_raise) else begin
+  $display("Assertion failed: Tick signal is not raised when mtime is incremented by the step value");
+end
+
+assert property (assertion_mtime_increment) else begin
+  $display("Assertion failed: mtime_d is not incremented correctly by the step value");
+end
+
+
+//6.Assertion to ensure that if the module is active and not in reset, the tick signal is not raised when mtime is not incremented(2 iterations)
+property assertion_tick_not_raised;
+  @(posedge clk_i) disable iff (!active || rst_ni)
+  ((tick === 1'b0) && (mtime_d == mtime));
+endproperty
+
+assert property (assertion_tick_not_raised) else begin
+  $display("Assertion failed: Tick signal is raised when mtime is not incremented");
+end
+
+
+  
+  //7.Assertion to verify prescaler value for a 48MHz clock generates a 1us tick (0 iterations)
+property assertion_48mhz_1us_tick;
+  @(posedge clk_i)
+  ((clk_i == 48_000_000) && (prescaler == 47)) |-> (tick === 1'b1);
+endproperty
+
+assert property (assertion_48mhz_1us_tick) else begin
+  $display("Assertion failed: Prescaler value for a 48MHz clock does not generate a 1us tick");
+end
+
+
+  //8.Assertion to verify prescaler value for a 200MHz clock generates a 1us tick (0 iterations)
+property assertion_200mhz_1us_tick;
+  @(posedge clk_i)
+  ((clk_i == 200_000_000) && (prescaler == 199)) |-> (tick === 1'b1);
+endproperty
+
+assert property (assertion_200mhz_1us_tick) else begin
+  $display("Assertion failed: Prescaler value for a 200MHz clock does not generate a 1us tick");
+end
+  
+  //9.Assertion to ensure that the prescaler value is within the valid range(1 iterations)
+property assertion_prescaler_range;
+  @(posedge clk_i)
+  (prescaler >= 0 && prescaler <= 4095);
+endproperty
+
+assert property (assertion_prescaler_range) else begin
+  $display("Assertion failed: Prescaler value is not within the range of 0 to 4095");
+end
+
+
+
+  //10.Assertion to check if mtime is correctly incremented by step value(0 iterations)
+property assertion_mtime_increment;
+  @(posedge clk_i)
+  disable iff (!active || rst_ni)
+  (active && (mtime_d == mtime + step));
+endproperty
+
+assert property (assertion_mtime_increment) else begin
+  $display("Assertion failed: mtime is not correctly incremented by the step value");
+end
+
