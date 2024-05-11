@@ -1,0 +1,40 @@
+  // 1.Assertion to check that the active low reset signal is synchronized with the clock signal(4 iterations)
+property assertion_reset_synchronized;
+  @(posedge clk_i)
+  disable iff (rst_ni)
+  (rst_ni == 1'b0) |=> !$rose(clk_i);
+endproperty
+assert property (assertion_reset_synchronized) else begin
+  $error("Reset signal not synchronized with clock signal");
+end
+
+//2.Assertion to ensure that the interrupt signal is generated when a channel completes its pattern based on configured repetitions
+// Define the property
+property check_interrupt_generation;
+    @(posedge clk_i) disable iff (rst_ni)
+    ( ($fell(intr_done_ch0_o) |-> (##[1:10] $changed(intr_done_ch0_o) && intr_done_ch0_o === 1'b1)) ) ||
+    ( ($fell(intr_done_ch1_o) |-> (##[1:10] $changed(intr_done_ch1_o) && intr_done_ch1_o === 1'b1)) );
+endproperty
+
+// Assert the property
+assert property (check_interrupt_generation)
+    else $error("Interrupt signal not generated on completion of pattern for either channel");
+
+3. Assertion to ensure that the parallel clock output is generated when the serial data output is valid(4 iterations)
+// Assertion for channel 0
+property check_parallel_clock_output_ch0;
+    @(posedge clk_i) disable iff (rst_ni)
+    $fell(pda0_tx_o) |-> (##[0:$bits(prediv0)] $rose(pcl0_tx_o) && pda0_tx_o == 1'b1);
+endproperty;
+
+assert property (check_parallel_clock_output_ch0)
+    else $error("Parallel clock output for channel 0 not generated correctly when serial data output is valid");
+
+// Assertion for channel 1
+property check_parallel_clock_output_ch1;
+    @(posedge clk_i) disable iff (rst_ni)
+    $fell(pda1_tx_o) |-> (##[0:$bits(prediv1)] $rose(pcl1_tx_o) && pda1_tx_o == 1'b1);
+endproperty;
+
+assert property (check_parallel_clock_output_ch1)
+    else $error("Parallel clock output for channel 1 not generated correctly when serial data output is valid");
