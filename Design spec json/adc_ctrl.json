@@ -1,0 +1,66 @@
+{
+  "UnifiedADCCtrlModule": {
+    "TheoryOfOperation": {
+      "BlockDiagram": {
+        "Inputs": {
+          "clk": "Clock input to the ADC controller",
+          "rst_n": "Active low reset signal",
+          "adc_channel_select": "Selection signal for ADC channel",
+          "adc_data": "10-bit ADC data for two channels",
+          "adc_data_valid": "Validity of ADC data for each channel",
+          "filter_thresholds": "Filtering thresholds for each ADC channel",
+          "low_power_enable": "Control signal to enable low power mode",
+          "power_up_delay": "Configurable delay for power-up sequence"
+        },
+        "Outputs": {
+          "adc_sample_ready": "Indicates that a sample has been processed and is ready",
+          "interrupt": "Signal to indicate processing completion or other events",
+          "power_mode": "Indicates if the ADC is in low power mode"
+        },
+        "StateMachine": {
+          "Description": "Manages the overall state transitions of the ADC processing from idle, through power-up, sampling, processing, and handling low power mode transitions."
+        }
+      },
+      "Description": {
+        "SampleProcess": "If ADC data is valid and exceeds the defined threshold for the selected channel, the data is processed and made ready.",
+        "LowPowerMode": "The controller enters low power mode based on an external control signal and reduces its power consumption until further instructed."
+      }
+    },
+    "DesignDetails": {
+      "FSM": {
+        "States": {
+          "IDLE": "Waits for enable conditions or low power signal",
+          "POWER_UP": "Initiates once enabled and goes through a defined power-up delay",
+          "SAMPLE": "Checks for valid ADC data and moves to processing",
+          "PROCESS": "Processes ADC data against thresholds and prepares output",
+          "COMPLETE": "Signals completion of processing via interrupts",
+          "LOW_POWER": "Reduces power consumption and waits for disable signal"
+        },
+        "Transitions": "Transitions are based on control signals and internal conditions such as data validity, thresholds, and configuration settings."
+      },
+      "InterruptLogic": {
+        "Description": "Generates an interrupt signal when data processing completes, indicating to the system that a new sample is ready."
+      },
+      "PowerModeControl": {
+        "Description": "Manages transitions into and out of low power mode based on external control inputs, optimizing power usage during periods of inactivity."
+      }
+    },
+    "SignalDefinitions": {
+      "Inputs": {
+        "clk": "System clock input",
+        "rst_n": "System reset, active low",
+        "adc_channel_select": "Selector for which ADC channel to process",
+        "adc_data": "Data inputs from ADC channels",
+        "adc_data_valid": "Validity flags for each channel's data",
+        "filter_thresholds": "Thresholds for processing ADC data",
+        "low_power_enable": "Enables low power mode operation",
+        "power_up_delay": "Delay counter for the power-up sequence"
+      },
+      "Outputs": {
+        "adc_sample_ready": "Flag indicating a ready sample",
+        "interrupt": "Interrupt signal for data processing completion",
+        "power_mode": "Current power mode status of the module"
+      }
+    }
+  }
+}
