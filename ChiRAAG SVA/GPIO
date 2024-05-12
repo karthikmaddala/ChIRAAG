@@ -1,0 +1,58 @@
+//  1.Assertion to ensure input stabilization through filtering mechanism(1 iterartion)
+property input_stabilization;
+    @(posedge clk_i)
+        disable iff (!rst_ni)
+            ($stable(gpio_input) |=> $stable(filter_reg));
+endproperty
+
+assert property (input_stabilization);
+
+  
+//2.Assertion to check the correctness of alert generation based on output and output enable signals(3 iterations)
+property alert_generation_prop;
+    @(posedge clk_i)
+    disable iff (!rst_ni)
+    ((gpio_output & ~gpio_output_enable) != 0) |-> (alert_signal == 1); // Alert should be 1 when condition met
+endproperty
+
+assert property (alert_generation_prop);
+
+  //3.Assertion to capture the generation of interrupts on rising edges of input signals(1 iteration)
+ property rising_edge_intr_prop;
+    @(posedge clk_i)
+    disable iff (!rst_ni)
+    ((gpio_input ^ previous_input) & gpio_input & intr_enable) |-> (intr_state != 0);
+endproperty
+assert property (rising_edge_intr_prop);
+
+
+property input_filtering_behavior_prop;
+    @(posedge clk_i)
+    disable iff (!rst_ni)
+    ($stable(filter_reg) |-> (filter_reg == gpio_input));
+endproperty
+assert property (input_filtering_behavior_prop);
+
+  
+  //4.Falling edge interrupt generation(0 iterations)
+property falling_edge_interrupt_prop;
+    @(negedge gpio_input) // Assuming negative edge triggers interrupt
+    ($fell(gpio_input) |-> (intr_state & gpio_input == 0));
+endproperty
+assert property (falling_edge_interrupt_prop);
+
+ //5.Assertion to ensure that interrupts are disabled when corresponding pins are not configured as outputs(1 iterations)
+property interrupt_disable_prop;
+    @(posedge clk_i)
+    (!$past(direct_oe) |-> !$past(intr_enable));
+endproperty
+
+assert property (interrupt_disable_prop) else $error("Interrupts should be disabled when corresponding pins are not configured as outputs");
+
+  //6.Assertion to confirm correct output control behavior(0 iterations)
+property output_control_prop;
+    @(posedge clk_i)
+    !(gpio_output && !gpio_output_enable) |-> $stable(gpio_output);
+endproperty
+
+assert property (output_control_prop) else $error("Incorrect output control behavior");
