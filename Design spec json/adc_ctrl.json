@@ -7,8 +7,8 @@
           "rst_n": "Active low reset signal",
           "adc_channel_select": "Selection signal for ADC channel",
           "adc_data": "10-bit ADC data for two channels",
-          "adc_data_valid": "Validity of ADC data for each channel",
-          "filter_thresholds": "Filtering thresholds for each ADC channel",
+          "adc_data_valid": "Validity of ADC data",
+          "filter_thresholds": "Filtering thresholds for each channel",
           "low_power_enable": "Control signal to enable low power mode",
           "power_up_delay": "Configurable delay for power-up sequence"
         },
@@ -32,9 +32,26 @@
           "IDLE": "Waits for enable conditions or low power signal",
           "POWER_UP": "Initiates once enabled and goes through a defined power-up delay",
           "SAMPLE": "Checks for valid ADC data and moves to processing",
-          "PROCESS": "Processes ADC data against thresholds and prepares output",
-          "COMPLETE": "Signals completion of processing via interrupts",
-          "LOW_POWER": "Reduces power consumption and waits for disable signal"
+          "PROCESS": {
+            "Description": "Processes ADC data against thresholds and prepares output. If the data exceeds the threshold, it is marked as valid and processed to adjust the sample ready signal.",
+            "ProcessingLogic": {
+              "FilterCheck": "Compares ADC data against set thresholds and determines if the data is within acceptable ranges.",
+              "SetReadySignal": "Sets the adc_sample_ready signal if data passes the filtering process."
+            }
+          },
+          "COMPLETE": {
+            "Description": "Signals completion of processing via interrupts, indicating that the data is ready for use.",
+            "CompletionLogic": {
+              "GenerateInterrupt": "Interrupt signal is set to indicate that processing has completed and data is ready."
+            }
+          },
+          "LOW_POWER": {
+            "Description": "Reduces power consumption and waits for disable signal.",
+            "PowerManagement": {
+              "EnterLowPowerMode": "Adjusts internal settings to minimize power usage while maintaining necessary functions.",
+              "ExitLowPowerMode": "Restores normal operation settings when low power mode is disabled."
+            }
+          }
         },
         "Transitions": "Transitions are based on control signals and internal conditions such as data validity, thresholds, and configuration settings."
       },
