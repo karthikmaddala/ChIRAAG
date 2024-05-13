@@ -1,18 +1,13 @@
-# **ChIRAAG : An automated LLM-based SVA generation framework.**
+# **ChIRAAG : An Automated LLM-Based SVA Generation Framework**
 
-**Codebase:**
+ChIRAAG is designed to automate the generation of SystemVerilog Assertions (SVA) using Large Language Models (LLMs). This framework simplifies the process of creating and refining SVAs by leveraging the OpenAI API and a command-line interface.
 
-**1)main.py :** Call to all the functions[call_openai_for_sva, extract_errors_from_log].
+## **Requirements**
+1. **OpenAI API**
+2. **Command Line Interface**
 
-**2)openai_utils.py:** Prompts are defined here.
+## **Installation**
+First, install the required Python package using pip:
+```bash
+pip install openapi
 
-**3)log_parser.py:** Used to parse the log file of the send to LLM.
-
-**4)sva_refinement.py:** Iterative call the LLM to refine the assertions based on the error log.
-
-
-
-
-**Running process :**
-
-python3 main.py 
