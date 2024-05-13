@@ -1,0 +1,109 @@
+// Property to check that the busy signal is set during a read or write operation
+property busy_signal_active;
+    @(posedge clk_i) disable iff (!rst_ni) 
+    (write_enable || read_enable) |-> (busy == 1);
+endproperty
+
+assert_busy_signal: assert property (busy_signal_active);
+
+// Property to ensure data scrambling is correctly applied before writing to memory
+property data_scrambled_correctly;
+    @(posedge clk_i) disable iff (!rst_ni) 
+    (write_enable == 1) |-> (data_in ^ nonce == data_out);  // Assuming nonce is correctly defined
+endproperty
+
+assert_data_scrambling: assert property (data_scrambled_correctly);
+
+// Property to verify parity generation during write operation
+property parity_generated_correctly;
+    @(posedge clk_i) disable iff (!rst_ni) 
+    (write_enable == 1) |-> (calculate_parity(data_in) == 1'b0);  // Using a function to calculate parity
+endproperty
+
+assert_parity_generation: assert property (parity_generated_correctly);
+
+// Property to validate parity checking during read operation
+property parity_checked_correctly;
+    @(posedge clk_i) disable iff (!rst_ni) 
+    (read_enable == 1) |-> (calculate_parity(data_out) == 1'b0);  // Using a function to calculate parity
+endproperty
+
+assert_parity_checking: assert property (parity_checked_correctly);
+
+// Property to check for alert signal activation on integrity issues
+property alert_on_integrity_issue;
+    @(posedge clk_i) disable iff (!rst_ni) 
+    (read_enable == 1) |-> ((data_out_error_condition) ? alert_signal : !alert_signal);
+endproperty
+
+assert_alert_signal: assert property (alert_on_integrity_issue);
+
+
+property pBusyHighWithReadWrite;
+    @(posedge clk_i) disable iff (rst_ni) 
+    ((read_enable || write_enable) && busy) |-> busy;
+endproperty
+
+assert_busy_high_with_read_write: assert property (pBusyHighWithReadWrite);
+
+
+property pBusyHighWithReadWrite;
+    @(posedge clk_i) disable iff (rst_ni) 
+    ((read_enable || write_enable) && busy) |-> busy;
+endproperty
+
+assert_busy_high_with_read_write: assert property (pBusyHighWithReadWrite);
+
+
+property pBusyHighWithReadWrite;
+    @(posedge clk_i) disable iff (rst_ni) 
+    ((read_enable || write_enable) && busy) |-> busy;
+endproperty
+
+assert_busy_high_with_read_write: assert property (pBusyHighWithReadWrite);
+
+
+property pBusyHighWithReadWrite;
+    @(posedge clk_i) disable iff (rst_ni) 
+    ((read_enable || write_enable) && busy) |-> busy;
+endproperty
+
+assert_busy_high_with_read_write: assert property (pBusyHighWithReadWrite);
+
+
+property pBusyHighWithReadWrite;
+    @(posedge clk_i) disable iff (rst_ni) 
+    ((read_enable || write_enable) && busy) |-> busy;
+endproperty
+
+assert_busy_high_with_read_write: assert property (pBusyHighWithReadWrite);
+
+
+property read_busy_assertion;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (read_enable && busy) |-> $rose(busy);
+endproperty
+
+assert property (read_busy_assertion);
+
+property write_busy_assertion;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (write_enable && busy) |-> $rose(busy);
+endproperty
+
+assert property (write_busy_assertion);
+
+property data_out_stable;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (read_enable && busy) |-> $stable(data_out);
+endproperty
+
+assert property (data_out_stable);
+
+property alert_assertion;
+    @(posedge clk_i) disable iff (!rst_ni)
+    (read_enable && parity_error_detected) |-> $rose(alert_signal);
+endproperty
+
+assert property (alert_assertion);
+
