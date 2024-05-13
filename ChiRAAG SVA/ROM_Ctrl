@@ -38,3 +38,52 @@ property operation_complete_signal;
 endproperty
 
 assert property (operation_complete_signal) else $error("Operation completion signaling failed");
+
+
+//6.Property to confirm that the controller initializes upon reset
+property pInitializeUponReset;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (bus_req_i == 0) |-> $past(bus_req_i) == 0;
+endproperty
+
+assert property (pInitializeUponReset) else $error("Initialization upon reset failed");
+
+//7. Property to ensure that the controller waits for a bus request in the IDLE state
+property pWaitForRequestInIdle;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (IDLE && !bus_req_i) |-> $stable(IDLE) && bus_req_i;
+endproperty
+
+assert property (pWaitForRequestInIdle) else $error("Controller does not wait for bus request in IDLE state");
+
+//8.Property to check that the controller transitions to the READ_ROM state upon receiving a bus request
+property pTransitionToReadRomOnRequest;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (state == IDLE && bus_req_i) |-> (state == READ_ROM);
+endproperty
+
+assert property (pTransitionToReadRomOnRequest) else $error("Transition to READ_ROM state on bus request failed");
+
+//9.Assertion to validate the data flow through the controller in the READ_ROM state:
+ property data_flow_read_rom;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (state == READ_ROM && rom_rvalid_i) |-> (bus_rvalid_o == 1);
+endproperty
+
+assert property (data_flow_read_rom) else $error("Data flow validation in READ_ROM state failed");
+
+//10. Assertion to ensure the controller increments the address after a successful read in the READ_ROM state:
+property address_increment_read_rom;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (state == READ_ROM && rom_rvalid_i) |-> ((rom_addr_o == $past(rom_addr_o) + 1) && (rom_addr_o <= AW));
+endproperty
+
+assert property (address_increment_read_rom) else $error("Address increment in READ_ROM state failed");
+
+//11.Assertion to check the completeness of data fetching and signaling operation completion:
+property completeness_and_operation_completion;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (state == DONE && pwrmgr_data_o && keymgr_data_o) |-> (state == IDLE);
+endproperty
+
+assert property (completeness_and_operation_completion) else $error("Data fetching completeness and operation completion failed");
