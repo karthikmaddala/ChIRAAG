@@ -1,0 +1,79 @@
+{
+  "ROMController": {
+    "TheoryOfOperation": {
+      "BlockDiagram": {
+        "Inputs": {
+          "clk_i": "Clock input that drives the controller operation.",
+          "rst_ni": "Active low reset signal for initializing the controller state.",
+          "bus_req_i": "Request signal from the bus to initiate ROM data fetching.",
+          "rom_data_i": "Input data from ROM, fetched based on the ROM address output.",
+          "rom_rvalid_i": "Valid signal indicating that the ROM data is valid and ready to be processed."
+        },
+        "Outputs": {
+          "bus_gnt_o": "Bus grant output that indicates whether the bus request is accepted.",
+          "bus_rdata_o": "Data output to the bus, carrying the ROM data fetched.",
+          "bus_rvalid_o": "Signal indicating the validity of the bus data output.",
+          "rom_addr_o": "Output ROM address for fetching data from ROM.",
+          "rom_req_o": "Signal to request data from ROM.",
+          "pwrmgr_data_o": "Output signal to the power manager indicating operation completion.",
+          "keymgr_data_o": "Output signal to the key manager with status or data.",
+          "alert_o": "Alert signal that indicates operational errors or misconfiguration."
+        },
+        "DataFlow": {
+          "Description": "The controller reads data sequentially from ROM based on requests from the bus and provides data back to the bus. It handles sequencing, error checking, and manages outputs to power and key managers."
+        }
+      },
+      "Description": {
+        "Initialization": "Upon reset, the controller initializes and waits for a bus request to start ROM operations.",
+        "OperationCycle": "After receiving a bus request, the controller fetches data from ROM, checks for validity, and outputs it to the bus until all requested data is processed or an error occurs."
+      }
+    },
+    "DesignDetails": {
+      "FSM": {
+        "Description": "The finite state machine transitions through various states to manage ROM data fetching and processing.",
+        "States": {
+          "IDLE": "Waits for a bus request. Initializes address to zero.",
+          "READ_ROM": "Fetches data from ROM. If valid, increments address and outputs data.",
+          "VERIFY": "Verifies the completeness and integrity of the fetched data.",
+          "DONE": "Signals operation completion to external managers and returns to IDLE for new operations.",
+          "ERROR": "Handles any error conditions detected during operations."
+        },
+        "Transitions": "State transitions are triggered by bus requests, data validity checks, and completion of data processing."
+      },
+      "ErrorHandling": {
+        "Alerts": "Generates alerts on data mismatches, invalid states, or configuration errors."
+      },
+      "CoreFunctionality": {
+        "ReadCycle": {
+          "Description": "In the READ_ROM state, the controller sends a ROM request signal (rom_req_o) set to high with the current address. It reads data on rom_data_i when rom_rvalid_i is high and passes this data to bus_rdata_o.",
+          "Conditionals": {
+            "DataValid": "If rom_rvalid_i is true, data is considered valid and bus_rvalid_o is set to high.",
+            "AddressIncrement": "After a successful read, the address is incremented unless it reaches the ROM depth."
+          }
+        },
+        "CompleteOperation": {
+          "Description": "When all data has been fetched, the controller transitions to VERIFY and then to DONE, signaling with pwrmgr_data_o and keymgr_data_o that the operation is complete."
+        }
+      }
+    },
+    "SignalDefinitions": {
+      "Inputs": {
+        "clk_i": "Input clock signal",
+        "rst_ni": "Active low asynchronous reset signal",
+        "bus_req_i": "Bus request input",
+        "rom_data_i": "Data input from ROM",
+        "rom_rvalid_i": "Signal indicating ROM data is ready and valid"
+      },
+      "Outputs": {
+        "bus_gnt_o": "Grant signal for bus access",
+        "bus_rdata_o": "ROM data output to bus",
+        "bus_rvalid_o": "Validity of the bus data output",
+        "rom_addr_o": "Address output for ROM data fetch",
+        "rom_req_o": "ROM request signal",
+        "pwrmgr_data_o": "Signal to power manager indicating operational status",
+        "keymgr_data_o": "Signal to key manager with status or data",
+        "alert_o": "Error or alert signal output"
+      }
+    }
+  }
+}
