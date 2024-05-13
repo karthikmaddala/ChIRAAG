@@ -5,4 +5,36 @@ property reset_initialization;
 endproperty
 
   assert property (reset_initialization) else $error("Reset initialization failed");
-    
+
+//2. Property to guarantee that after receiving a bus request, the controller fetches data
+    property fetch_data_on_request;
+        @(posedge clk_i) disable iff (!rst_ni) 
+            (bus_req_i && state != ERROR) |-> (rom_req_o && rom_addr_o == address);
+    endproperty
+assert property(fetch_data_on_request)
+
+ //3.Property to verify that in the `READ_ROM` state, if `rom_rvalid_i` is true, data is considered valid
+property valid_data_on_rom_valid;
+    @(posedge clk_i) disable iff (!rst_ni) 
+  (state == READ_ROM && rom_rvalid_i) |-> bus_rvalid_o;
+endproperty
+
+assert property (valid_data_on_rom_valid) else $error("Data validity assertion failed in READ_ROM state");
+
+//4. Property to ensure address increments correctly in `READ_ROM` state
+property address_increment;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (state == READ_ROM && rom_rvalid_i) |-> 
+        (rom_addr_o == (address + 1) % RomDepth);
+endproperty
+
+assert property (address_increment) else $error("Address increment failed in READ_ROM state");
+
+//5.Property to check that the controller transitions correctly and signals completion
+property operation_complete_signal;
+    @(posedge clk_i) disable iff (!rst_ni)
+        (bus_rvalid_o && state == DONE) |-> 
+        (pwrmgr_data_o && keymgr_data_o);
+endproperty
+
+assert property (operation_complete_signal) else $error("Operation completion signaling failed");
