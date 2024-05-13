@@ -1,0 +1,79 @@
+//1.Assert transition to POWER_UP state when enabled
+property p_transition_to_power_up;
+    @(posedge clk)
+    disable iff (!rst_n)
+    (adc_enable && state == IDLE) |-> next_state == POWER_UP;
+endproperty
+
+assert property (p_transition_to_power_up)
+else $error("Error: ADC Controller did not transition to POWER_UP state when enabled");
+
+  
+//2.Assert ADC data processing and sample ready signal
+property p_process_and_sample_ready;
+    @(posedge clk)
+    disable iff (!rst_n)
+    state == SAMPLE && adc_data_valid[adc_channel_select] && adc_data[adc_channel_select] > filter_thresholds[adc_channel_select]
+  |-> (next_state == PROCESS && adc_sample_ready);
+endproperty
+
+assert property (p_process_and_sample_ready)
+else $error("Error: ADC data not processed correctly or sample ready signal not set when exceeding threshold");
+
+  
+//3.Assert interrupt generation upon data processing completion
+property p_generate_interrupt;
+    @(posedge clk)
+    disable iff (!rst_n)
+    state == PROCESS && adc_sample_ready
+  |-> (next_state == COMPLETE && interrupt);
+endproperty
+
+assert property (p_generate_interrupt)
+else $error("Error: Interrupt not generated upon completion of data processing");
+
+  
+//4.Assert transition to LOW_POWER state when low power mode is enabled
+property p_transition_to_low_power;
+    @(posedge clk)
+    disable iff (!rst_n)
+  (low_power_enable && state == IDLE) |-> next_state == LOW_POWER;
+endproperty
+
+assert property (p_transition_to_low_power)
+else $error("Error: ADC Controller did not transition to LOW_POWER state when low power mode is enabled");
+//5.
+property p_adc_sample_ready_after_processing_completion;
+    @(posedge clk)
+    disable iff (!rst_n)
+    (next_state == PROCESS && adc_sample_ready) |-> $rose(adc_sample_ready);
+endproperty
+
+assert property (p_adc_sample_ready_after_processing_completion)
+else $error("Error: adc_sample_ready signal is asserted before processing completion");
+//6.
+property p_low_power_mode_transition_logic;
+    @(posedge clk)
+    disable iff (!rst_n)
+    (low_power_enable && state == IDLE) |-> $changed(power_mode);
+endproperty
+
+assert property (p_low_power_mode_transition_logic)
+else $error("Error: Incorrect low power mode transition logic");
+//7.
+property p_data_processing_completed_before_interrupt;
+    @(posedge clk)
+    disable iff (!rst_n)
+    (next_state == PROCESS && interrupt) |-> $rose(interrupt);
+endproperty
+
+assert property (p_data_processing_completed_before_interrupt)
+else $error("Error: Interrupt is generated before data processing completion");
+//8.
+  property adc_power_up;
+    @(posedge clk)
+    disable iff (!rst_n)
+    (IDLE && !in_low_power_mode && POWER_UP);
+endproperty
+
+assert property (adc_power_up);
