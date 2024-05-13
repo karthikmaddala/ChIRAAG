@@ -1,0 +1,8 @@
+//1. Property to ensure that upon reset, the controller initializes and waits for a bus request
+property reset_initialization;
+    @(posedge clk_i) disable iff (!rst_ni) 
+        ($rose(rst_ni) |-> !bus_req_i);
+endproperty
+
+  assert property (reset_initialization) else $error("Reset initialization failed");
+    
