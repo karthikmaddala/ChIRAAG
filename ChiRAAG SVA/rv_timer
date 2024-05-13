@@ -98,3 +98,9 @@ assert property (assertion_mtime_increment) else begin
   $display("Assertion failed: mtime is not correctly incremented by the step value");
 end
 
+//11.Assertion to check if tick_count resets to 0 on reset
+property tick_count_reset;
+    @(posedge clk_i) disable iff (!rst_ni)
+    $stable(tick_count) |-> (tick_count == 12'h0);
+end property
+
