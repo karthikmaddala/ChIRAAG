@@ -27,3 +27,17 @@ source ~/.bashrc
 **3)log_parser.py:** Used to parse the log file of the send to LLM.
 
 **4)sva_refinement.py:** Iterative call the LLM to refine the assertions based on the error log.
+
+
+## **Citation:**
+**If you use ChIRAAG for your research, please cite our paper:**
+```bash
+@misc{mali2024chiraag,
+      title={ChIRAAG: ChatGPT Informed Rapid and Automated Assertion Generation}, 
+      author={Bhabesh Mali and Karthik Maddala and Sweeya Reddy and Vatsal Gupta and Chandan Karfa and Ramesh Karri},
+      year={2024},
+      eprint={2402.00093},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE}
+}
+```
