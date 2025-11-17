@@ -1,88 +1,48 @@
-  // 1.Assertion to check that the active low reset signal is synchronized with the clock signal(4 iterations)
-property assertion_reset_synchronized;
-  @(posedge clk_i)
-  disable iff (rst_ni)
-  (rst_ni == 1'b0) |=> !$rose(clk_i);
-endproperty
-assert property (assertion_reset_synchronized) else begin
-  $error("Reset signal not synchronized with clock signal");
-end
+// 1) After reset release, ctrl enable bits should be cleared within 2 cycles
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+    $rose(rst_ni) |=> ##[0:2] (reg2hw.ctrl.enable_ch0.q == 1'b0 && reg2hw.ctrl.enable_ch1.q == 1'b0)
+  ) else $error("SVA: pattgen_reg_top: reg ctrl enables not cleared after reset");
 
-//2.Assertion to ensure that the interrupt signal is generated when a channel completes its pattern based on configured repetitions
-// Define the property
-property check_interrupt_generation;
-    @(posedge clk_i) disable iff (rst_ni)
-    ( ($fell(intr_done_ch0_o) |-> (##[1:10] $changed(intr_done_ch0_o) && intr_done_ch0_o === 1'b1)) ) ||
-    ( ($fell(intr_done_ch1_o) |-> (##[1:10] $changed(intr_done_ch1_o) && intr_done_ch1_o === 1'b1)) );
-endproperty
+  // 2) TL handshake response: request should yield response d_valid within 2 cycles
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+  (tl_reg_h2d.a_valid && !tl_reg_h2d.a_is_write && tl_reg_d2h.a_ready)
+    |-> ##[0:2] tl_reg_d2h.d_valid
+) else $error("SVA: pattgen_reg_top: accepted TL READ did not produce d_valid");
 
-// Assert the property
-assert property (check_interrupt_generation)
-    else $error("Interrupt signal not generated on completion of pattern for either channel");
+  // 3) reg access must hit exactly one address
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+    (reg_we || reg_re) |-> $onehot0(addr_hit)
+  ) else $error("SVA: pattgen_reg_top: reg access did not hit exactly one address");
 
-3. Assertion to ensure that the parallel clock output is generated when the serial data output is valid(4 iterations)
-// Assertion for channel 0
-property check_parallel_clock_output_ch0;
-    @(posedge clk_i) disable iff (rst_ni)
-    $fell(pda0_tx_o) |-> (##[0:$bits(prediv0)] $rose(pcl0_tx_o) && pda0_tx_o == 1'b1);
-endproperty;
+  // 4) reg_we_check must be onehot when writing (error trigger check)
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+    (reg_we && !addrmiss) |-> $onehot0(reg_we_check)
+  ) else $error("SVA: pattgen_reg_top: reg_we_check not one-hot on write");
+  //5
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+  $rose(intr_done_ch0_o) |-> ( reg2hw.intr_enable.done_ch0.q || reg2hw.intr_test.done_ch0.q )
+) else $error("SVA: pattgen_core: intr_done_ch0 fired without enable/test");
 
-assert property (check_parallel_clock_output_ch0)
-    else $error("Parallel clock output for channel 0 not generated correctly when serial data output is valid");
+// 6) intr_done_ch1 must only be asserted when enabled or test is active
+assert property (@(posedge clk_i) disable iff (!rst_ni)
+  $rose(intr_done_ch1_o) |-> ( reg2hw.intr_enable.done_ch1.q || reg2hw.intr_test.done_ch1.q )
+) else $error("SVA: pattgen_core: intr_done_ch1 fired without enable/test");
 
-// Assertion for channel 1
-property check_parallel_clock_output_ch1;
-    @(posedge clk_i) disable iff (rst_ni)
-    $fell(pda1_tx_o) |-> (##[0:$bits(prediv1)] $rose(pcl1_tx_o) && pda1_tx_o == 1'b1);
-endproperty;
-
-assert property (check_parallel_clock_output_ch1)
-    else $error("Parallel clock output for channel 1 not generated correctly when serial data output is valid");
-
-//Assertion 4: Assert that the interrupt signal intr_done_ch0_o for channel 0 is activated only when the pattern for channel 0 completes(0 iterations)
-property check_intr_done_ch0_completion;
-    @(posedge clk_i) disable iff (rst_ni)
-    (intr_done_ch0_o == 1'b1) |-> ##[1:$] (intr_done_ch0_o == 1'b0);
-endproperty;
-
-// Assert the property
-assert property (check_intr_done_ch0_completion)
-    else $error("Interrupt signal intr_done_ch0_o did not behave as expected after pattern completion.");
+// 7) bit/rep counters bounds
+  // inside pattgen_chan module
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+  (bit_cnt_q <= len_q)) else $error("SVA: pattgen_chan: bit_cnt_q exceeded len_q");
 
 
-//Assertion 5: Assert that the data output signals pda0_tx_o and pda1_tx_o for both channels are stable during the parallel clock output pcl0_tx_o and pcl1_tx_o:
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+  (rep_cnt_q <= reps_q)) else $error("SVA: pattgen_chan: rep_cnt_q exceeded reps_q");
 
+  // 8) event_done one-cycle pulse
+  // ensure event_done_o is a one-cycle pulse
+	assert property (@(posedge clk_i) disable iff (!rst_ni)
+  ( event_done_o |-> ##1 (!event_done_o) )) else $error("SVA: pattgen_chan: event_done_o not single-cycle");
 
-// Define the property to check if pda0_tx_o is stable at the posedge of pcl0_tx_o
-property check_pda0_stability_on_pcl0;
-    @(posedge pcl0_tx_o) disable iff (!rst_ni)
-    (pda0_tx_o == $past(pda0_tx_o));
-endproperty;
-
-// Assert the property
-assert property (check_pda0_stability_on_pcl0)
-    else $error("Data output pda0_tx_o is not stable during the parallel clock output pcl0_tx_o.");
-
-  // Define the property to check if pda1_tx_o is stable at the posedge of pcl1_tx_o
-property check_pda1_stability_on_pcl1;
-    @(posedge pcl1_tx_o) disable iff (!rst_ni)
-    (pda1_tx_o == $past(pda1_tx_o));
-endproperty;
-
-// Assert the property
-assert property (check_pda1_stability_on_pcl1)
-    else $error("Data output pda1_tx_o is not stable during the parallel clock output pcl1_tx_o.");
-
-//Assertion 6: Assert that the interrupt signal intr_done_ch1_o for channel 1 is activated only after channel 0 completes its pattern without any reset assertion(0 iterations):
-  // Define the property to check intr_done_ch1_o activation follows intr_done_ch0_o completion without a reset
-property check_intr_done_ch1_activation;
-    @(posedge intr_done_ch0_o) disable iff (!rst_ni)
-    !rst_ni |-> ##1 (intr_done_ch1_o == 1'b1);
-endproperty;
-
-// Assert the property
-assert property (check_intr_done_ch1_activation)
-    else $error("Interrupt signal intr_done_ch1_o was not activated correctly after intr_done_ch0_o without reset.");
-
-
-
+// 9
+ assert property (@(posedge clk_i) disable iff (!rst_ni)
+  (!active_q) |-> ( (pcl_o === inactive_level_pcl_q) &&
+                    (pda_o === inactive_level_pda_q) )) else $error("SVA: pattgen_chan: outputs not inactive when idle");
