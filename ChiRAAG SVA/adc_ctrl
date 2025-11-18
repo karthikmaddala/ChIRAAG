@@ -1,79 +1,81 @@
-//1.Assert transition to POWER_UP state when enabled
-property p_transition_to_power_up;
-    @(posedge clk)
-    disable iff (!rst_n)
-    (adc_enable && state == IDLE) |-> next_state == POWER_UP;
-endproperty
+// ======= SVA Assertions added here (inside adc_ctrl_fsm) =======
+  //
+  // Place these properties inside this module so all referenced signals are in scope.
+  //
 
-assert property (p_transition_to_power_up)
-else $error("Error: ADC Controller did not transition to POWER_UP state when enabled");
+  // 1) ONESHOT: oneshot_done should be followed by chn1 write then chn0 write (one cycle apart)
+  property p_oneshot_sequence;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      oneshot_done_o |-> (##1 chn1_val_we_o) ##1 chn0_val_we_o;
+  endproperty
+  assert property (p_oneshot_sequence)
+    else $error("SVA: oneshot_done -> chn1_val_we then chn0_val_we (1 cycle gaps) failed");
 
-  
-//2.Assert ADC data processing and sample ready signal
-property p_process_and_sample_ready;
-    @(posedge clk)
-    disable iff (!rst_n)
-    state == SAMPLE && adc_data_valid[adc_channel_select] && adc_data[adc_channel_select] > filter_thresholds[adc_channel_select]
-  |-> (next_state == PROCESS && adc_sample_ready);
-endproperty
+  // 2) Trigger rising (trigger_l2h) should cause the FSM to enter PWRUP in next cycle
+  property p_trigger_to_pwrup;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      trigger_l2h |-> ##1 (fsm_state_q == PWRUP);
+  endproperty
+  assert property (p_trigger_to_pwrup)
+    else $error("SVA: trigger_l2h did not lead to PWRUP next cycle");
 
-assert property (p_process_and_sample_ready)
-else $error("Error: ADC data not processed correctly or sample ready signal not set when exceeding threshold");
+  // 3) Trigger falling (trigger_h2l) should cause FSM to go to PWRDN next cycle
+  property p_trigger_to_pwrdn;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      trigger_h2l |-> ##1 (fsm_state_q == PWRDN);
+  endproperty
+  assert property (p_trigger_to_pwrdn)
+    else $error("SVA: trigger_h2l did not lead to PWRDN next cycle");
 
-  
-//3.Assert interrupt generation upon data processing completion
-property p_generate_interrupt;
-    @(posedge clk)
-    disable iff (!rst_n)
-    state == PROCESS && adc_sample_ready
-  |-> (next_state == COMPLETE && interrupt);
-endproperty
+  // 4) NP_DONE state asserts adc_ctrl_done_o in the same cycle and returns to NP_0 next cycle
+  //    Write the consequent as a sequence: adc_ctrl_done_o ##1 fsm_state_q==NP_0
+  property p_np_done_done_and_return;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      (fsm_state_q == NP_DONE) |-> (adc_ctrl_done_o) ##1 (fsm_state_q == NP_0);
+  endproperty
+  assert property (p_np_done_done_and_return)
+    else $error("SVA: NP_DONE must assert adc_ctrl_done_o and then return to NP_0");
 
-assert property (p_generate_interrupt)
-else $error("Error: Interrupt not generated upon completion of data processing");
+  // 5) LP_SLP state must have ADC powered down (adc_pd_o asserted) while in that state
+  property p_lp_slp_powerdown;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      (fsm_state_q == LP_SLP) |-> (adc_pd_o == 1'b1);
+  endproperty
+  assert property (p_lp_slp_powerdown)
+    else $error("SVA: LP_SLP must drive adc_pd_o = 1");
 
-  
-//4.Assert transition to LOW_POWER state when low power mode is enabled
-property p_transition_to_low_power;
-    @(posedge clk)
-    disable iff (!rst_n)
-  (low_power_enable && state == IDLE) |-> next_state == LOW_POWER;
-endproperty
+  // 6) When FSM is selecting channel0 and adc_d_val_i occurs, chn0_val_we_o should be asserted next cycle
+  property p_chan0_sample_write;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      (fsm_chn0_sel && adc_d_val_i) |-> ##1 (chn0_val_we_o == 1'b1);
+  endproperty
+  assert property (p_chan0_sample_write)
+    else $error("SVA: Sampling chn0 with adc_d_val_i should produce chn0_val_we_o next cycle");
 
-assert property (p_transition_to_low_power)
-else $error("Error: ADC Controller did not transition to LOW_POWER state when low power mode is enabled");
-//5.
-property p_adc_sample_ready_after_processing_completion;
-    @(posedge clk)
-    disable iff (!rst_n)
-    (next_state == PROCESS && adc_sample_ready) |-> $rose(adc_sample_ready);
-endproperty
+  // 7) When ld_match occurs and there is no stay_match, np_sample_cnt_q must be cleared to zero
+  property p_ld_match_clears_np_cnt;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      (ld_match && !stay_match) |-> (np_sample_cnt_q == '0);
+  endproperty
+  assert property (p_ld_match_clears_np_cnt)
+    else $error("SVA: ld_match & !stay_match should clear np_sample_cnt_q");
 
-assert property (p_adc_sample_ready_after_processing_completion)
-else $error("Error: adc_sample_ready signal is asserted before processing completion");
-//6.
-property p_low_power_mode_transition_logic;
-    @(posedge clk)
-    disable iff (!rst_n)
-    (low_power_enable && state == IDLE) |-> $changed(power_mode);
-endproperty
+  // 8) If in PWRUP state, the pwrup timer should be enabled while the counter hasn't reached cfg_pwrup_time_i
+  property p_pwrup_timer_progress;
+    @(posedge clk_aon_i)
+      disable iff (!rst_aon_ni)
+      (fsm_state_q == PWRUP && pwrup_timer_cnt_q != cfg_pwrup_time_i) |-> (pwrup_timer_cnt_en);
+  endproperty
+  assert property (p_pwrup_timer_progress)
+    else $error("SVA: In PWRUP, timer should be enabled (pwrup_timer_cnt_en) while not at target");
 
-assert property (p_low_power_mode_transition_logic)
-else $error("Error: Incorrect low power mode transition logic");
-//7.
-property p_data_processing_completed_before_interrupt;
-    @(posedge clk)
-    disable iff (!rst_n)
-    (next_state == PROCESS && interrupt) |-> $rose(interrupt);
-endproperty
-
-assert property (p_data_processing_completed_before_interrupt)
-else $error("Error: Interrupt is generated before data processing completion");
-//8.
-  property adc_power_up;
-    @(posedge clk)
-    disable iff (!rst_n)
-    (IDLE && !in_low_power_mode && POWER_UP);
-endproperty
-
-assert property (adc_power_up);
+  //
+  // ======= End SVA block =======
+  //
