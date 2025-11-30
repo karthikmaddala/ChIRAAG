@@ -32,12 +32,13 @@ source ~/.bashrc
 ## **Citation:**
 **If you use ChIRAAG for your research, please cite our paper:**
 ```bash
-@misc{mali2024chiraag,
-      title={ChIRAAG: ChatGPT Informed Rapid and Automated Assertion Generation}, 
-      author={Bhabesh Mali and Karthik Maddala and Sweeya Reddy and Vatsal Gupta and Chandan Karfa and Ramesh Karri},
-      year={2024},
-      eprint={2402.00093},
-      archivePrefix={arXiv},
-      primaryClass={cs.SE}
+@inproceedings{mali2024chiraag,
+  title={Chiraag: Chatgpt informed rapid and automated assertion generation},
+  author={Mali, Bhabesh and Maddala, Karthik and Gupta, Vatsal and Reddy, Sweeya and Karfa, Chandan and Karri, Ramesh},
+  booktitle={2024 IEEE Computer Society Annual Symposium on VLSI (ISVLSI)},
+  pages={680--683},
+  year={2024},
+  organization={IEEE}
 }
+
 ```
